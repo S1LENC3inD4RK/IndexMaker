@@ -1,129 +1,352 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Web Editor</title>
-
-<style>
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #0f0f0f;
-  color: #fff;
-}
-
-header {
-  padding: 10px;
-  background: #111;
-  text-align: center;
-  font-weight: bold;
-}
-
-.editor {
-  padding: 8px;
-}
-
-textarea {
-  width: 100%;
-  height: 140px;
-  background: #1a1a1a;
-  color: #00ffcc;
-  border: none;
-  padding: 8px;
-  font-family: monospace;
-  font-size: 14px;
-  margin-bottom: 8px;
-  resize: vertical;
-}
-
-button {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 6px;
-  background: #222;
-  color: white;
-  border: none;
-  font-size: 16px;
-}
-
-iframe {
-  width: 375px;
-  height: 667px;
-  border: 2px solid #333;
-  background: white;
-}
-
-.preview-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 10px;
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mobile Web Editor</title>
+  <style>
+    :root{
+      --bg:#0f0f0f; --panel:#111; --muted:#999; --accent:#00ffcc;
+      --editor-bg:#1a1a1a; --button:#222;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter, "Segoe UI", Roboto, sans-serif;
+      background:var(--bg); color:#fff; -webkit-font-smoothing:antialiased;
+    }
+    header{padding:12px; background:var(--panel); text-align:center; font-weight:700}
+    .container{display:flex; gap:12px; padding:12px; flex-wrap:wrap;}
+    .left{flex:1; min-width:300px; max-width:720px}
+    .right{width:420px; min-width:280px}
+    .editor{display:grid; grid-template-columns:1fr; gap:8px}
+    textarea{width:100%; height:120px; background:var(--editor-bg); color:var(--accent);
+      border:1px solid #222; padding:8px; font-family:monospace; font-size:13px; resize:vertical;
+    }
+    .controls{display:flex; gap:8px; flex-wrap:wrap}
+    button, select{
+      padding:8px 10px; background:var(--button); color:#fff; border:none; cursor:pointer;
+      font-size:14px;
+    }
+    .muted{color:var(--muted); font-size:13px}
+    .preview-wrapper{display:flex; justify-content:center; padding:12px}
+    iframe{border:2px solid #333; background:#fff; width:375px; height:667px; display:block}
+    .small{font-size:13px}
+    .actions{display:flex; gap:6px; margin-top:6px}
+    .top-right{display:flex; gap:8px; align-items:center}
+    @media (max-width:900px){
+      .container{flex-direction:column}
+      .right{width:100%}
+      iframe{width:100%; height:600px}
+    }
+  </style>
 </head>
-
 <body>
+  <header id="mainHeader">📱 Редактор мобильных веб‑страниц</header>
 
-<header>📱 Mobile Web Editor</header>
+  <div class="container">
+    <div class="left">
+      <div class="editor">
+        <textarea id="html" placeholder="HTML"></textarea>
+        <textarea id="css" placeholder="CSS"></textarea>
+        <textarea id="js" placeholder="JavaScript"></textarea>
+      </div>
 
-<div class="editor">
-  <textarea id="html" placeholder="HTML"></textarea>
-  <textarea id="css" placeholder="CSS"></textarea>
-  <textarea id="js" placeholder="JavaScript"></textarea>
+      <div class="controls" style="margin-top:8px">
+        <button id="previewBtn">👁 Предпросмотр</button>
+        <button id="saveBtn">💾 Сохранить</button>
+        <button id="loadSampleBtn">📄 Загрузить образец</button>
+        <button id="clearBtn">🧹 Очистить</button>
+      </div>
 
-  <button onclick="updatePreview()">👁 Предпросмотр</button>
-  <button onclick="downloadHTML()">⬇ Скачать HTML</button>
-  <button onclick="downloadCSS()">⬇ Скачать CSS</button>
-  <button onclick="downloadJS()">⬇ Скачать JS</button>
-</div>
+      <div class="actions">
+        <button id="downloadFull">⬇ Скачать HTML</button>
+        <button id="downloadCSS">⬇ Скачать CSS</button>
+        <button id="downloadJS">⬇ Скачать JS</button>
+        <span class="muted small" style="align-self:center">Авто‑сохранение: <span id="autosaveStatus">вкл</span></span>
+      </div>
+    </div>
 
-<div class="preview-wrapper">
-  <iframe id="preview"></iframe>
-</div>
+    <div class="right">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="muted small" id="emulationLabel">Эмуляция устройства</div>
+        <div class="top-right">
+          <select id="langSelect" title="Choose language">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+          <select id="deviceSelect" title="Выбрать устройство">
+            <option value="phone">Телефон — 375×667</option>
+            <option value="phablet">Phablet — 412×915</option>
+            <option value="tablet">Планшет — 768×1024</option>
+            <option value="desktop">Десктоп — 100% ширины</option>
+          </select>
+        </div>
+      </div>
 
-<script>
-function updatePreview() {
-  const html = document.getElementById('html').value;
-  const css = document.getElementById('css').value;
-  const js = document.getElementById('js').value;
+      <div class="preview-wrapper">
+        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+    </div>
+  </div>
 
-  const result = `
-<!DOCTYPE html>
+  <script>
+    // Элементы
+    const elHeader = document.getElementById('mainHeader');
+    const elHTML = document.getElementById('html');
+    const elCSS = document.getElementById('css');
+    const elJS = document.getElementById('js');
+    const iframe = document.getElementById('preview');
+    const deviceSelect = document.getElementById('deviceSelect');
+    const autosaveStatus = document.getElementById('autosaveStatus');
+    const langSelect = document.getElementById('langSelect');
+    const emulationLabel = document.getElementById('emulationLabel');
+
+    // Keys and defaults
+    const LS_KEY = 'mobile_web_editor_v1';
+    const LS_LANG = 'mobile_web_editor_lang_v1';
+    const DEFAULT_HTML_RU = '<h1 style="text-align:center">Привет! Редактируй здесь</h1><p style="padding:0 12px">Изменяй HTML, CSS, JS и смотри превью справа.</p>';
+    const DEFAULT_CSS_RU = 'body{font-family:system-ui, -apple-system, "Segoe UI", Roboto; padding:12px; margin:0} h1{color:#00ffcc}';
+    const DEFAULT_JS_RU = 'console.log("Привет из скрипта");';
+
+    const DEFAULT_HTML_EN = '<h1 style="text-align:center">Hello! Edit here</h1><p style="padding:0 12px">Change HTML, CSS, JS and preview on the right.</p>';
+    const DEFAULT_CSS_EN = 'body{font-family:system-ui, -apple-system, "Segoe UI", Roboto; padding:12px; margin:0} h1{color:#00ffcc}';
+    const DEFAULT_JS_EN = 'console.log("Hello from script");';
+
+    // Translations
+    const i18n = {
+      ru: {
+        header: '📱 Редактор мобильных веб‑страниц',
+        preview: '👁 Предпросмотр',
+        save: '💾 Сохранить',
+        loadSample: '📄 Загрузить образец',
+        clear: '🧹 Очистить',
+        downloadFull: '⬇ Скачать HTML',
+        downloadCSS: '⬇ Скачать CSS',
+        downloadJS: '⬇ Скачать JS',
+        emulation: 'Эмуляция устройства',
+        autosave_on: 'вкл',
+        autosave_off: 'выкл',
+        clear_confirm: 'Очистить все поля?',
+        device_phone: 'Телефон — 375×667',
+        device_phablet: 'Phablet — 412×915',
+        device_tablet: 'Планшет — 768×1024',
+        device_desktop: 'Десктоп — 100% ширины',
+        save_btn_short: 'Сохранить'
+      },
+      en: {
+        header: '📱 Mobile Web Editor',
+        preview: '👁 Preview',
+        save: '💾 Save',
+        loadSample: '📄 Load sample',
+        clear: '🧹 Clear',
+        downloadFull: '⬇ Download HTML',
+        downloadCSS: '⬇ Download CSS',
+        downloadJS: '⬇ Download JS',
+        emulation: 'Device emulation',
+        autosave_on: 'on',
+        autosave_off: 'off',
+        clear_confirm: 'Clear all fields?',
+        device_phone: 'Phone — 375×667',
+        device_phablet: 'Phablet — 412×915',
+        device_tablet: 'Tablet — 768×1024',
+        device_desktop: 'Desktop — 100% width',
+        save_btn_short: 'Save'
+      }
+    };
+
+    // Elements for texts
+    const btnPreview = document.getElementById('previewBtn');
+    const btnSave = document.getElementById('saveBtn');
+    const btnLoad = document.getElementById('loadSampleBtn');
+    const btnClear = document.getElementById('clearBtn');
+    const btnDownloadFull = document.getElementById('downloadFull');
+    const btnDownloadCSS = document.getElementById('downloadCSS');
+    const btnDownloadJS = document.getElementById('downloadJS');
+
+    // Load from localStorage
+    function loadFromLS(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){
+          const obj = JSON.parse(raw);
+          elHTML.value = obj.html||'';
+          elCSS.value = obj.css||'';
+          elJS.value = obj.js||'';
+        } else {
+          // Load default depending on language
+          const lang = getSavedLang();
+          if(lang === 'en'){
+            elHTML.value = DEFAULT_HTML_EN;
+            elCSS.value = DEFAULT_CSS_EN;
+            elJS.value = DEFAULT_JS_EN;
+          } else {
+            elHTML.value = DEFAULT_HTML_RU;
+            elCSS.value = DEFAULT_CSS_RU;
+            elJS.value = DEFAULT_JS_RU;
+          }
+        }
+      }catch(e){
+        elHTML.value = DEFAULT_HTML_RU;
+        elCSS.value = DEFAULT_CSS_RU;
+        elJS.value = DEFAULT_JS_RU;
+      }
+    }
+
+    // Save to localStorage
+    function saveToLS(){
+      const obj = {html: elHTML.value, css: elCSS.value, js: elJS.value, updated: Date.now()};
+      localStorage.setItem(LS_KEY, JSON.stringify(obj));
+      flashStatus('saved');
+    }
+
+    // debounce helper
+    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+    // Build full document
+    function buildFullDocument(){
+      const html = elHTML.value || '';
+      const css = elCSS.value || '';
+      const js = elJS.value || '';
+      return `<!doctype html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 </head>
 <body>
 ${html}
-<script>${js}<\/script>
+<script>${js.replace(/<\/script>/g,'<\\/script>')}</script>
 </body>
-</html>
-`;
+</html>`;
+    }
 
-  const iframe = document.getElementById('preview');
-  iframe.srcdoc = result;
-}
+    // Update preview
+    function updatePreview(){
+      const doc = buildFullDocument();
+      iframe.srcdoc = doc;
+    }
+    const debouncedUpdate = debounce(updatePreview, 300);
 
-function downloadFile(name, content) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], {type: 'text/plain'}));
-  a.download = name;
-  a.click();
-}
+    // Downloads
+    function download(name, content, type='text/plain'){
+      const a = document.createElement('a');
+      const blob = new Blob([content], {type});
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    btnDownloadFull.addEventListener('click', ()=> download('index.html', buildFullDocument(), 'text/html'));
+    btnDownloadCSS.addEventListener('click', ()=> download('style.css', elCSS.value||'', 'text/css'));
+    btnDownloadJS.addEventListener('click', ()=> download('script.js', elJS.value||'', 'application/javascript'));
 
-function downloadHTML() {
-  downloadFile('index.html', document.getElementById('html').value);
-}
+    // UI buttons
+    btnPreview.addEventListener('click', updatePreview);
+    btnSave.addEventListener('click', saveToLS);
+    btnLoad.addEventListener('click', ()=>{
+      const lang = getSavedLang();
+      if(lang === 'en'){
+        elHTML.value = DEFAULT_HTML_EN; elCSS.value = DEFAULT_CSS_EN; elJS.value = DEFAULT_JS_EN;
+      } else {
+        elHTML.value = DEFAULT_HTML_RU; elCSS.value = DEFAULT_CSS_RU; elJS.value = DEFAULT_JS_RU;
+      }
+      updatePreview(); saveToLS();
+    });
+    btnClear.addEventListener('click', ()=>{
+      const lang = getSavedLang();
+      const confirmText = i18n[lang].clear_confirm;
+      if(confirm(confirmText)){ elHTML.value=''; elCSS.value=''; elJS.value=''; updatePreview(); saveToLS(); }
+    });
 
-function downloadCSS() {
-  downloadFile('style.css', document.getElementById('css').value);
-}
+    // Autosave on input
+    [elHTML, elCSS, elJS].forEach(el => {
+      el.addEventListener('input', ()=>{
+        debouncedUpdate();
+        // autosave after pause
+        autosaveDebounced();
+      });
+    });
+    const autosaveDebounced = debounce(()=>{ saveToLS(); }, 1500);
 
-function downloadJS() {
-  downloadFile('script.js', document.getElementById('js').value);
-}
-</script>
+    // Device sizing
+    deviceSelect.addEventListener('change', ()=>{
+      const v = deviceSelect.value;
+      if(v==='phone'){ iframe.style.width='375px'; iframe.style.height='667px'; }
+      else if(v==='phablet'){ iframe.style.width='412px'; iframe.style.height='915px'; }
+      else if(v==='tablet'){ iframe.style.width='768px'; iframe.style.height='1024px'; }
+      else if(v==='desktop'){ iframe.style.width='100%'; iframe.style.height='700px'; }
+    });
+
+    // Language logic
+    function getSavedLang(){
+      const saved = localStorage.getItem(LS_LANG);
+      if(saved) return saved;
+      // default to ru
+      return 'ru';
+    }
+    function setSavedLang(lang){
+      localStorage.setItem(LS_LANG, lang);
+    }
+    function applyLanguage(lang){
+      // Header and buttons
+      elHeader.textContent = i18n[lang].header;
+      btnPreview.textContent = i18n[lang].preview;
+      btnSave.textContent = i18n[lang].save;
+      btnLoad.textContent = i18n[lang].loadSample;
+      btnClear.textContent = i18n[lang].clear;
+      btnDownloadFull.textContent = i18n[lang].downloadFull;
+      btnDownloadCSS.textContent = i18n[lang].downloadCSS;
+      btnDownloadJS.textContent = i18n[lang].downloadJS;
+      emulationLabel.textContent = i18n[lang].emulation;
+      // Autosave status text keep toggled ON for UX; only label changes
+      const autosOn = i18n[lang].autosave_on;
+      autosaveStatus.textContent = autosOn;
+      // Device options
+      deviceSelect.options[0].text = i18n[lang].device_phone;
+      deviceSelect.options[1].text = i18n[lang].device_phablet;
+      deviceSelect.options[2].text = i18n[lang].device_tablet;
+      deviceSelect.options[3].text = i18n[lang].device_desktop;
+
+      // Placeholders (HTML/CSS/JS names are universal, keep them same)
+      elHTML.placeholder = 'HTML';
+      elCSS.placeholder = 'CSS';
+      elJS.placeholder = 'JavaScript';
+    }
+
+    // Flash save status (small visual feedback in autosaveStatus)
+    let flashTimer = null;
+    function flashStatus(type){
+      // show a short "saved" text depending on lang
+      const lang = getSavedLang();
+      const savedText = (lang==='en') ? 'saved' : 'сохранено';
+      const prev = autosaveStatus.textContent;
+      autosaveStatus.textContent = (type==='saved') ? savedText : prev;
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(()=>{ autosaveStatus.textContent = i18n[lang].autosave_on; }, 1000);
+    }
+
+    // Language selector change
+    langSelect.addEventListener('change', ()=>{
+      const chosen = langSelect.value;
+      setSavedLang(chosen);
+      applyLanguage(chosen);
+    });
+
+    // Init
+    (function init(){
+      // set language select to saved value
+      const lang = getSavedLang();
+      langSelect.value = lang;
+      applyLanguage(lang);
+
+      loadFromLS();
+      updatePreview();
+      // apply device sizing initial
+      deviceSelect.dispatchEvent(new Event('change'));
+    })();
+
+  </script>
 
 </body>
 </html>
