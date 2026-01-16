@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Web Editor</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+header {
+  padding: 10px;
+  background: #111;
+  text-align: center;
+  font-weight: bold;
+}
+
+.editor {
+  padding: 8px;
+}
+
+textarea {
+  width: 100%;
+  height: 140px;
+  background: #1a1a1a;
+  color: #00ffcc;
+  border: none;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  margin-bottom: 8px;
+  resize: vertical;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 6px;
+  background: #222;
+  color: white;
+  border: none;
+  font-size: 16px;
+}
+
+iframe {
+  width: 375px;
+  height: 667px;
+  border: 2px solid #333;
+  background: white;
+}
+
+.preview-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>📱 Mobile Web Editor</header>
+
+<div class="editor">
+  <textarea id="html" placeholder="HTML"></textarea>
+  <textarea id="css" placeholder="CSS"></textarea>
+  <textarea id="js" placeholder="JavaScript"></textarea>
+
+  <button onclick="updatePreview()">👁 Предпросмотр</button>
+  <button onclick="downloadHTML()">⬇ Скачать HTML</button>
+  <button onclick="downloadCSS()">⬇ Скачать CSS</button>
+  <button onclick="downloadJS()">⬇ Скачать JS</button>
+</div>
+
+<div class="preview-wrapper">
+  <iframe id="preview"></iframe>
+</div>
+
+<script>
+function updatePreview() {
+  const html = document.getElementById('html').value;
+  const css = document.getElementById('css').value;
+  const js = document.getElementById('js').value;
+
+  const result = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>${css}</style>
+</head>
+<body>
+${html}
+<script>${js}<\/script>
+</body>
+</html>
+`;
+
+  const iframe = document.getElementById('preview');
+  iframe.srcdoc = result;
+}
+
+function downloadFile(name, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type: 'text/plain'}));
+  a.download = name;
+  a.click();
+}
+
+function downloadHTML() {
+  downloadFile('index.html', document.getElementById('html').value);
+}
+
+function downloadCSS() {
+  downloadFile('style.css', document.getElementById('css').value);
+}
+
+function downloadJS() {
+  downloadFile('script.js', document.getElementById('js').value);
+}
+</script>
+
+</body>
+</html>
