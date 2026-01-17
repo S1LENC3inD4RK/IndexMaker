@@ -3,128 +3,276 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Web Editor</title>
+<title>IndexMaker</title>
 
 <style>
+:root{
+  --bg:#0d0f14;
+  --panel:#171a21;
+  --border:#2a2f3a;
+  --text:#e6e9f0;
+  --muted:#9aa0ad;
+  --accent:#4da6ff;
+}
+*{box-sizing:border-box}
 body{
   margin:0;
-  font-family:sans-serif;
-  background:#0f0f0f;
-  color:white;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,sans-serif;
 }
 header{
-  padding:10px;
-  background:#111;
+  position:sticky;
+  top:0;
+  background:#0b0d12;
+  border-bottom:1px solid var(--border);
   display:flex;
-  justify-content:space-between;
-  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  z-index:10;
+}
+.logo{
+  padding:8px 12px;
+  border-radius:10px;
+  background:linear-gradient(135deg,#4da6ff,#7c7cff);
+  color:black;
+  font-weight:600;
 }
 button{
-  background:#222;
-  color:white;
-  border:none;
-  padding:8px;
+  background:var(--panel);
+  color:var(--text);
+  border:1px solid var(--border);
+  padding:8px 12px;
+  border-radius:10px;
+}
+button:hover{border-color:var(--accent)}
+main{
+  padding:10px;
+  display:grid;
+  gap:14px;
+}
+.section{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+}
+h3{
+  margin:0 0 6px;
+  font-size:15px;
+  color:var(--accent);
 }
 textarea{
   width:100%;
-  height:130px;
-  background:#1a1a1a;
-  color:#00ffcc;
-  border:none;
-  padding:8px;
-  font-family:monospace;
+  min-height:140px;
+  background:#0b0d12;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
 }
 iframe{
-  width:375px;
-  height:667px;
-  border:2px solid #333;
+  width:100%;
+  height:320px;
+  border:none;
+  border-radius:12px;
   background:white;
 }
-.editor{padding:8px}
-.preview{display:flex;justify-content:center;padding:10px}
+.hidden{display:none}
+.file{
+  display:flex;
+  justify-content:space-between;
+  gap:6px;
+  margin-bottom:6px;
+}
+footer{
+  text-align:center;
+  padding:12px;
+  color:#777;
+  font-size:12px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-  <span id="title">📱 Mobile Web Editor</span>
-  <button onclick="switchLang()">RU / EN</button>
+  <div class="logo">IndexMaker</div>
+  <button id="btnPreview"></button>
+  <button id="btnSave"></button>
+  <button id="btnSaved"></button>
+  <button id="btnHtml">⬇ HTML</button>
+  <button id="btnCss">⬇ CSS</button>
+  <button id="btnJs">⬇ JS</button>
+  <button id="btnLang">🌍 RU / ENG</button>
 </header>
 
-<div class="editor">
-  <textarea id="html" placeholder="HTML"></textarea>
-  <textarea id="css" placeholder="CSS"></textarea>
-  <textarea id="js" placeholder="JavaScript"></textarea>
+<main>
 
-  <button onclick="updatePreview()" id="btnPreview">👁 Предпросмотр</button>
-  <button onclick="download('index.html', html.value)" id="btnHtml">⬇ Скачать HTML</button>
-  <button onclick="download('style.css', css.value)" id="btnCss">⬇ Скачать CSS</button>
-  <button onclick="download('script.js', js.value)" id="btnJs">⬇ Скачать JS</button>
+<div class="section">
+  <h3 id="tHtml"></h3>
+  <textarea id="html"><h1>Hello IndexMaker</h1></textarea>
 </div>
 
-<div class="preview">
-  <iframe id="preview"></iframe>
+<div class="section">
+  <h3 id="tCss"></h3>
+  <textarea id="css">body{font-family:sans-serif}</textarea>
 </div>
+
+<div class="section">
+  <h3 id="tJs"></h3>
+  <textarea id="js">console.log("IndexMaker ready")</textarea>
+</div>
+
+<div class="section hidden" id="savedTab">
+  <h3 id="tSaved"></h3>
+  <div id="savedList"></div>
+</div>
+
+<div class="section">
+  <h3 id="tPreview"></h3>
+  <iframe id="frame"></iframe>
+</div>
+
+</main>
+
+<footer>(c) SilentInDark</footer>
 
 <script>
-const texts = {
-  ru:{
-    title:"📱 Мобильный Web Редактор",
-    preview:"👁 Предпросмотр",
-    html:"⬇ Скачать HTML",
-    css:"⬇ Скачать CSS",
-    js:"⬇ Скачать JS"
-  },
-  en:{
-    title:"📱 Mobile Web Editor",
-    preview:"👁 Preview",
-    html:"⬇ Download HTML",
-    css:"⬇ Download CSS",
-    js:"⬇ Download JS"
-  }
-};
+const STORAGE="indexmaker_projects"
+let lang="ru"
 
-let lang = localStorage.getItem("lang") || "ru";
+/* elements */
+const html=document.getElementById("html")
+const css=document.getElementById("css")
+const js=document.getElementById("js")
+const frame=document.getElementById("frame")
+const savedTab=document.getElementById("savedTab")
+const savedList=document.getElementById("savedList")
+
+/* buttons */
+btnPreview.onclick=preview
+btnSave.onclick=saveProject
+btnSaved.onclick=toggleSaved
+btnLang.onclick=()=>{lang=lang==="ru"?"en":"ru";applyLang()}
+btnHtml.onclick=()=>downloadHTML()
+btnCss.onclick=()=>download("style.css",css.value,"text/css")
+btnJs.onclick=()=>download("script.js",js.value,"text/javascript")
+
+/* lang */
+const dict={
+ru:{
+  preview:"▶ Предпросмотр",
+  save:"💾 Сохранить",
+  saved:"Сохранённые проекты",
+  html:"HTML код",
+  css:"CSS стили",
+  js:"JavaScript код",
+  previewTitle:"Предпросмотр сайта",
+  empty:"Нет сохранённых проектов"
+},
+en:{
+  preview:"▶ Preview",
+  save:"💾 Save",
+  saved:"Saved projects",
+  html:"HTML code",
+  css:"CSS styles",
+  js:"JavaScript code",
+  previewTitle:"Site preview",
+  empty:"No saved projects"
+}
+}
 
 function applyLang(){
-  const t = texts[lang];
-  title.textContent = t.title;
-  btnPreview.textContent = t.preview;
-  btnHtml.textContent = t.html;
-  btnCss.textContent = t.css;
-  btnJs.textContent = t.js;
+  const d=dict[lang]
+  btnPreview.textContent=d.preview
+  btnSave.textContent=d.save
+  btnSaved.textContent=d.saved
+  tHtml.textContent=d.html
+  tCss.textContent=d.css
+  tJs.textContent=d.js
+  tSaved.textContent=d.saved
+  tPreview.textContent=d.previewTitle
 }
+applyLang()
 
-function switchLang(){
-  lang = lang === "ru" ? "en" : "ru";
-  localStorage.setItem("lang", lang);
-  applyLang();
-}
-
-function updatePreview(){
-  preview.srcdoc = `
-<!DOCTYPE html>
+/* preview */
+function preview(){
+  frame.srcdoc=`<!DOCTYPE html>
 <html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>${css.value}</style>
-</head>
+<head><style>${css.value}</style></head>
 <body>
 ${html.value}
 <script>${js.value}<\/script>
 </body>
-</html>`;
+</html>`
 }
 
-function download(name, content){
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], {type:"text/plain"}));
-  a.download = name;
-  a.click();
+/* save */
+function saveProject(){
+  const list=JSON.parse(localStorage.getItem(STORAGE)||"[]")
+  list.push({html:html.value,css:css.value,js:js.value,time:Date.now()})
+  localStorage.setItem(STORAGE,JSON.stringify(list))
 }
 
-applyLang();
+/* saved */
+function toggleSaved(){
+  savedTab.classList.toggle("hidden")
+  renderSaved()
+}
+function renderSaved(){
+  const list=JSON.parse(localStorage.getItem(STORAGE)||"[]")
+  savedList.innerHTML=""
+  if(!list.length){
+    savedList.textContent=dict[lang].empty
+    return
+  }
+  list.forEach((p,i)=>{
+    const d=document.createElement("div")
+    d.className="file"
+    d.innerHTML=`
+      <span>${new Date(p.time).toLocaleString()}</span>
+      <span>
+        <button onclick="loadProject(${i})">▶</button>
+        <button onclick="deleteProject(${i})">🗑</button>
+      </span>`
+    savedList.appendChild(d)
+  })
+}
+function loadProject(i){
+  const p=JSON.parse(localStorage.getItem(STORAGE))[i]
+  html.value=p.html
+  css.value=p.css
+  js.value=p.js
+}
+function deleteProject(i){
+  const list=JSON.parse(localStorage.getItem(STORAGE))
+  list.splice(i,1)
+  localStorage.setItem(STORAGE,JSON.stringify(list))
+  renderSaved()
+}
+
+/* download */
+function download(name,content,type){
+  const a=document.createElement("a")
+  a.href=URL.createObjectURL(new Blob([content],{type}))
+  a.download=name
+  a.click()
+}
+function downloadHTML(){
+  download("index.html",`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+${html.value}
+<script src="script.js"><\/script>
+</body>
+</html>`,"text/html")
+}
 </script>
 
 </body>
